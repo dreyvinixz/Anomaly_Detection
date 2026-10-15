@@ -83,3 +83,25 @@ Os arquivos PCAP compactados NÃO são incluídos no Artifact nem em commits.
 Artefatos expiram após 14 dias. A fonte do MIT precisa aceitar downloads
 no ambiente GitHub-hosted; caso contrário o job mostrará o erro no log.
 A comparação com o ground truth oficial dos ataques continua pendente.
+
+
+## Etapa 2 — Resultados empíricos versionados (DARPA 1999 Week 2)
+
+A execução real no GitHub Actions foi concluída com sucesso: **7.275.137
+pacotes**, **6.424 janelas de 60 segundos** e **115 anomalias sinalizadas**
+em **6.274 janelas avaliadas**. MAE = 6,1314 PPS e RMSE = 12,3259 PPS.
+Os oito testes unitários foram aprovados.
+
+**Documentação científica com tabelas, gráficos e ressalvas:**
+[Etapa 2 — relatório e dados](reports/week2-1999/README.md)
+([índice](docs/ETAPA_2.md)).
+
+Os CSVs, gráficos PNG, estatísticas JSON, checagens de integridade e
+auditoria temporal são versionados em reports/week2-1999/ pela automação
+[Publish Week 2 results](.github/workflows/publish-week2-results.yml).
+O arquivo traffic_pps_gap_aware.png evita linhas artificiais atravessando
+períodos sem captura. Os dados brutos compactados não são versionados.
+
+**Interpretação importante:** 115 alertas não equivalem a 115 ataques.
+A correspondência com o ground truth documentado pelo MIT permanece
+pendente e será tratada na etapa seguinte.
