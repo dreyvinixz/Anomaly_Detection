@@ -100,7 +100,7 @@ def preprocess(input_dir: Path, output_csv: Path, max_gap_minutes: int = 5) -> i
     try:
         with output_csv.open("w", newline="", encoding="utf-8") as stream:
             writer = csv.writer(stream)
-            writer.writerow(["window_start_utc", "packets", "bytes_total", "pps", "bytes_per_second"])
+            writer.writerow(["source_day", "window_start_utc", "packets", "bytes_total", "pps", "bytes_per_second"])
             for path in daily_paths:
                 print(f"[process] {path}")
                 count = 0
@@ -108,7 +108,7 @@ def preprocess(input_dir: Path, output_csv: Path, max_gap_minutes: int = 5) -> i
                     if previous is not None and minute <= previous:
                         raise ValueError(f"Overlapping or unsorted captures near {path}")
                     writer.writerow([
-                        datetime.fromtimestamp(minute, tz=timezone.utc).isoformat(),
+                        path.parent.name, datetime.fromtimestamp(minute, tz=timezone.utc).isoformat(),
                         packets, size, f"{packets / 60:.6f}", f"{size / 60:.6f}"
                     ])
                     previous, windows, count = minute, windows + 1, count + 1
