@@ -55,3 +55,31 @@ A metodologia e limitações estão em docs/METHODOLOGY.md.
 **Status:** baseline inicial. Os ataques oficiais ainda não estão
 integrados como ground truth e a avaliação no dataset completo ainda
 precisa ser executada. Nenhuma métrica real do DARPA foi inventada.
+
+
+## Processamento integral no GitHub Actions
+
+O workflow [DARPA 1999 Week 2 - full offline analysis](.github/workflows/darpa-week2.yml)
+usa uma VM temporária Ubuntu 24.04 sem depender do computador local.
+Ele inicia automaticamente no primeiro push da configuração na branch
+feat/mvp-60s-ewma. Depois de integrado à main, novas execuções poderão
+ser iniciadas em **Actions > DARPA 1999 Week 2 > Run workflow**.
+
+Etapas automatizadas:
+1. Instalar TShark e dependências Python e executar testes unitários.
+2. Baixar cinco arquivos inside.tcpdump.gz de segunda a sexta.
+3. Verificar integridade de cada gzip e registrar SHA-256.
+4. Processar os PCAPs em streaming, em buckets UTC de 60 segundos.
+5. Auditar source_day, timestamps, cronologia e PPS = pacotes/60.
+6. Calcular EWMA/MAD, estatísticas e gráfico com eixo Y em PPS.
+7. Publicar o Artifact darpa-week2-60s-<run_id> com:
+   - data/processed/traffic_60s.csv
+   - results/capture_validation.json
+   - results/sha256sums.txt
+   - results/detections.csv e results/anomalies.csv
+   - results/metrics.json e results/figures/traffic_pps.png
+
+Os arquivos PCAP compactados NÃO são incluídos no Artifact nem em commits.
+Artefatos expiram após 14 dias. A fonte do MIT precisa aceitar downloads
+no ambiente GitHub-hosted; caso contrário o job mostrará o erro no log.
+A comparação com o ground truth oficial dos ataques continua pendente.
