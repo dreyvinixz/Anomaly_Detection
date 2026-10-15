@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "darpa-anomaly-detection"
+version = "0.1.0"
+description = "Offline DARPA 1999 Week 2 anomaly detection in 60-second windows"
+requires-python = ">=3.10"
+dependencies = ["matplotlib>=3.7"]
+
+[project.scripts]
+darpa-anomaly = "anomaly_detection.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
