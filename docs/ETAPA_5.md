@@ -70,3 +70,45 @@ quando as verificações automatizadas são aprovadas.
 
 Este estágio é uma auditoria empírica dos metadados do sensor, não um
 classificador supervisionado por fluxo.
+
+
+## Resolução de marx por triangulação de fontes
+
+A listagem oficial de hosts internos do MIT em 1999 não inclui o nome marx,
+embora a lista oficial de ataques o inclua como destino. **Não inventamos uma
+associação a partir dessa listagem incompleta.** Investigações publicadas
+sobre o mesmo benchmark, porém, identificam marx.eyrie.af.mil como
+**172.16.114.50**:
+
+- Estudo sobre detecção de ataques web e análise HTTP no DARPA 1999,
+  Computer Networks 45 (2004), pp. 175–193:
+  https://citeseerx.ist.psu.edu/document?doi=09d599a09ed0010b650c7b078c52d6780b7ab794&repid=rep1&type=pdf
+- Detection of Web-based Attacks through Markovian Protocol Parsing:
+  https://citeseerx.ist.psu.edu/document?doi=0ea94147c57398653a5797414986963338248227&repid=rep1&type=pdf
+- Estudo Variable Shaped Detector também utiliza o endereço
+  172.16.114.50 para marx na semana de ataques:
+  https://citeseerx.ist.psu.edu/document?doi=ca587f68e4f7a10f4322f449da44ee535cc96c22&repid=rep1&type=pdf
+
+Na primeira extração de metadados, 172.16.114.50 surgiu como destino mais
+frequente nas três janelas referentes aos ataques IDs 17, 24 e 36. Isso
+fornece **corroboração empírica** da associação sugerida por pesquisas
+anteriores. Seu estatuto deve ser registrado como
+*host mapeado por literatura secundária e dados observados*, e NÃO como
+mapeamento diretamente listado pelo MIT.
+
+A associação de endereço reforça a análise, mas **não resolve o problema de
+atribuir cada pacote a uma sessão maliciosa específica**. Para isso
+são necessárias informações adicionais de autoria, duração ou rotulação
+por fluxo/pacote. Essa distinção deve permanecer explícita no relatório final.
+
+## Controle de integridade das flags TCP
+
+A primeira execução de metadados com campos booleanos individuais do TShark
+retornou zero flags TCP apesar de haver dezenas de milhares de segmentos TCP.
+Esta rodada NÃO fornece resultados válidos de flags e não deve ser usada no
+relatório experimental.
+
+O extrator foi corrigido para ler o campo numérico tcp.flags e usar as
+máscaras SYN=0x02, ACK=0x10, RST=0x04, FIN=0x01. Uma asserção impede que
+a execução publique resultados com todas as flags zeradas. Apenas os
+resultados da execução corrigida, quando validados, devem ser empregados.
