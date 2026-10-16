@@ -1,0 +1,75 @@
+{
+  "scope": "attack onset proximity ONLY, not attack confirmation or validated classification",
+  "official_label_url": "https://archive.ll.mit.edu/ideval/docs/detections_1999.html",
+  "labels_sha256": "ed0444f4ddf7d37ebfe9b5a82ee26420db8e6991afbcaeac051ac153ead68955",
+  "detections_sha256": "1f2c1587f685ddb40ad6a1fd67b7263dba0eb60d908f562e9b8d20994e0eacc7",
+  "baseline": {
+    "tolerance_minutes": 5,
+    "official_onsets": 43,
+    "captured_onsets": 43,
+    "scorable_onsets": 38,
+    "matched_onsets_all": 4,
+    "matched_scorable_onsets": 4,
+    "matched_alert_windows": 9,
+    "unassociated_alert_windows": 106,
+    "onset_match_rate_scoreable": 0.105263
+  },
+  "onset_tolerances": [
+    {
+      "tolerance_minutes": 0,
+      "official_onsets": 43,
+      "captured_onsets": 43,
+      "scorable_onsets": 38,
+      "matched_onsets_all": 3,
+      "matched_scorable_onsets": 3,
+      "matched_alert_windows": 3,
+      "unassociated_alert_windows": 112,
+      "onset_match_rate_scoreable": 0.078947
+    },
+    {
+      "tolerance_minutes": 1,
+      "official_onsets": 43,
+      "captured_onsets": 43,
+      "scorable_onsets": 38,
+      "matched_onsets_all": 4,
+      "matched_scorable_onsets": 4,
+      "matched_alert_windows": 6,
+      "unassociated_alert_windows": 109,
+      "onset_match_rate_scoreable": 0.105263
+    },
+    {
+      "tolerance_minutes": 5,
+      "official_onsets": 43,
+      "captured_onsets": 43,
+      "scorable_onsets": 38,
+      "matched_onsets_all": 4,
+      "matched_scorable_onsets": 4,
+      "matched_alert_windows": 9,
+      "unassociated_alert_windows": 106,
+      "onset_match_rate_scoreable": 0.105263
+    },
+    {
+      "tolerance_minutes": 10,
+      "official_onsets": 43,
+      "captured_onsets": 43,
+      "scorable_onsets": 38,
+      "matched_onsets_all": 7,
+      "matched_scorable_onsets": 7,
+      "matched_alert_windows": 13,
+      "unassociated_alert_windows": 102,
+      "onset_match_rate_scoreable": 0.184211
+    },
+    {
+      "tolerance_minutes": 30,
+      "official_onsets": 43,
+      "captured_onsets": 43,
+      "scorable_onsets": 38,
+      "matched_onsets_all": 11,
+      "matched_scorable_onsets": 11,
+      "matched_alert_windows": 24,
+      "unassociated_alert_windows": 91,
+      "onset_match_rate_scoreable": 0.289474
+    }
+  ],
+  "experiments": 27
+}

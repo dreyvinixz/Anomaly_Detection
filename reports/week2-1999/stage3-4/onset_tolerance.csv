@@ -1,0 +1,6 @@
+tolerance_minutes,official_onsets,captured_onsets,scorable_onsets,matched_onsets_all,matched_scorable_onsets,matched_alert_windows,unassociated_alert_windows,onset_match_rate_scoreable
+0,43,43,38,3,3,3,112,0.078947
+1,43,43,38,4,4,6,109,0.105263
+5,43,43,38,4,4,9,106,0.105263
+10,43,43,38,7,7,13,102,0.184211
+30,43,43,38,11,11,24,91,0.289474
