@@ -109,6 +109,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add reports/week2-1999
+          # Source .gitignore excludes data/ and results/ anywhere in the tree.
+          # Explicitly include only this small, curated, reproducible snapshot.
+          git add -f reports/week2-1999/data/traffic_60s.csv
+          git add -f reports/week2-1999/results/detections.csv
+          git add -f reports/week2-1999/results/anomalies.csv
+          git add -f reports/week2-1999/results/metrics.json
+          git add -f reports/week2-1999/results/capture_validation.json
+          git add -f reports/week2-1999/results/source_archive_sha256sums.txt
           if git diff --cached --quiet; then
             echo "Already published: no changes."
           else
