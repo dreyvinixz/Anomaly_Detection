@@ -1,0 +1,29 @@
+{
+  "all_five_raw_pcaps_checked": true,
+  "total_frames_validated": 7275137,
+  "frames_by_day": {
+    "monday": 1753377,
+    "tuesday": 1585120,
+    "wednesday": 1011149,
+    "thursday": 1563069,
+    "friday": 1362422
+  },
+  "selected_windows": 150,
+  "original_ewma_alerts_investigated": 115,
+  "official_event_ids": [
+    17,
+    24,
+    26,
+    36
+  ],
+  "host_mapping_marx": "unresolved_not_in_official_inside_host_list",
+  "host_mapping_pigeon": "172.16.114.207",
+  "alert_traffic_phenotypes": {
+    "low_rate_deviation": 33,
+    "mixed_unresolved": 44,
+    "udp_dominated": 38
+  },
+  "confirmed_true_positives": null,
+  "confirmed_false_positives": null,
+  "reason_no_tp_fp": "Attack intervals and packet attribution are not completely labeled"
+}
