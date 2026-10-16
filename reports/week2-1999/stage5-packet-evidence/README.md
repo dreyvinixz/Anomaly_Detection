@@ -4,10 +4,10 @@ Foram relidas as cinco capturas originais do MIT, com verificação de contagens
 
 | ID | Ataque | Destino oficial | IPv4 oficial | SYN PPS 5 min antes | SYN PPS 6 min a partir do início | Destino SYN mais frequente |
 |---:|---|---|---|---:|---:|---|
-| 17 | satan | marx.eyrie.af.mil | não resolvido | 0.0 | 0.0 | - |
-| 24 | satan | marx.eyrie.af.mil | não resolvido | 0.0 | 0.0 | - |
-| 26 | neptune | pigeon.eyrie.af.mil | 172.16.114.207 | 0.0 | 0.0 | - |
-| 36 | neptune | marx.eyrie.af.mil | não resolvido | 0.0 | 0.0 | - |
+| 17 | satan | marx.eyrie.af.mil | não resolvido | 0.193333 | 29.227778 | 172.16.114.50 |
+| 24 | satan | marx.eyrie.af.mil | não resolvido | 1.466667 | 29.497222 | 172.16.114.50 |
+| 26 | neptune | pigeon.eyrie.af.mil | 172.16.114.207 | 2.143333 | 30.002778 | 172.16.114.207 |
+| 36 | neptune | marx.eyrie.af.mil | não resolvido | 0.806667 | 29.252778 | 172.16.114.50 |
 
 **Interpretação:** a identificação do IP de pigeon (172.16.114.207) é sustentada pelo inventário oficial de hosts de 1999. O destino marx não aparece naquele inventário e permanece não resolvido; não atribuir ao marx o IP predominante sem provas adicionais.
 
