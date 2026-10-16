@@ -1,0 +1,129 @@
+name: Publish DARPA Week 2 results into repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/mvp-60s-ewma
+    paths:
+      - .github/workflows/publish-week2-results.yml
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: stage2-publication-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and version DARPA Week 2 results
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install and run unit tests
+        run: |
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+
+      - name: Download original successful Week 2 analysis artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 38824820433
+          name: darpa-week2-60s-38824820433
+          path: .run-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate the data and original result files
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          root = Path(".run-artifact")
+          paths = [
+              "data/processed/traffic_60s.csv",
+              "results/detections.csv",
+              "results/anomalies.csv",
+              "results/metrics.json",
+              "results/capture_validation.json",
+              "results/sha256sums.txt",
+              "results/figures/traffic_pps.png",
+          ]
+          for name in paths:
+              path = root / name
+              assert path.is_file() and path.stat().st_size, f"Missing {path}"
+          metrics = json.loads((root / "results/metrics.json").read_text())
+          audit = json.loads((root / "results/capture_validation.json").read_text())
+          assert metrics["windows"] == 6424
+          assert metrics["scored_windows"] == 6274
+          assert metrics["anomaly_windows"] == 115
+          assert audit["total_packets"] == 7275137
+          assert audit["granularity_seconds"] == 60
+          assert set(audit["per_capture"]) == {
+              "monday", "tuesday", "wednesday", "thursday", "friday"
+          }
+          with (root / "results/detections.csv").open(newline="") as f:
+              detections = list(csv.DictReader(f))
+          with (root / "results/anomalies.csv").open(newline="") as f:
+              anomalies = list(csv.DictReader(f))
+          with (root / "data/processed/traffic_60s.csv").open(newline="") as f:
+              series = list(csv.DictReader(f))
+          assert len(detections) == len(series) == metrics["windows"]
+          assert len(anomalies) == metrics["anomaly_windows"]
+          assert sum(int(r["packets"]) for r in series) == audit["total_packets"]
+          assert sum(int(r["is_warmup"]) == 0 for r in detections) == metrics["scored_windows"]
+          assert len((root / "results/sha256sums.txt").read_text().splitlines()) == 5
+          print("All seven artifact sources and core metrics are consistent.")
+          PY
+
+      - name: Copy validated files to tracked report directory
+        run: |
+          mkdir -p reports/week2-1999/data reports/week2-1999/results reports/week2-1999/figures
+          cp .run-artifact/data/processed/traffic_60s.csv reports/week2-1999/data/traffic_60s.csv
+          cp .run-artifact/results/detections.csv reports/week2-1999/results/detections.csv
+          cp .run-artifact/results/anomalies.csv reports/week2-1999/results/anomalies.csv
+          cp .run-artifact/results/metrics.json reports/week2-1999/results/metrics.json
+          cp .run-artifact/results/capture_validation.json reports/week2-1999/results/capture_validation.json
+          cp .run-artifact/results/sha256sums.txt reports/week2-1999/results/source_archive_sha256sums.txt
+          cp .run-artifact/results/figures/traffic_pps.png reports/week2-1999/figures/traffic_pps_original.png
+
+      - name: Regenerate corrected PPS graphs
+        run: |
+          python scripts/plot_stage2.py \
+            --detections reports/week2-1999/results/detections.csv \
+            --figures reports/week2-1999/figures
+          test -s reports/week2-1999/figures/traffic_pps_gap_aware.png
+          test -s reports/week2-1999/figures/traffic_pps_by_day.png
+          test -s reports/week2-1999/figures/daily_pps.png
+
+      - name: Version all real data, metrics and figures
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/week2-1999
+          if git diff --cached --quiet; then
+            echo "Already published: no changes."
+          else
+            git commit -m "results: version DARPA Week 2 series metrics and PPS graphs"
+            git push origin HEAD:feat/mvp-60s-ewma
+          fi
+
+      - name: Write human-readable job summary
+        run: |
+          {
+            echo "## DARPA 1999 — Etapa 2 publicada no Git"
+            echo ""
+            echo "- 7.275.137 pacotes; 6.424 janelas de 60 segundos"
+            echo "- 115 alertas EWMA/MAD em 6.274 janelas avaliadas"
+            echo "- 4 lacunas de coleta mantidas (não são tráfego zero)"
+            echo "- CSV, JSON, PNG e análise: reports/week2-1999/"
+            echo "- Não há ground truth de ataques integrado neste estágio"
+          } >> "$GITHUB_STEP_SUMMARY"
