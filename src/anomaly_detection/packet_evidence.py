@@ -24,8 +24,7 @@ from .evaluate_week2 import load_official, read_csv
 TARGETS = {"pigeon.eyrie.af.mil": "172.16.114.207"}
 EVENT_IDS = (17, 24, 26, 36)
 FIELDS = ("frame.time_epoch", "frame.len", "ip.src", "ip.dst", "ip.proto",
-          "tcp.dstport", "udp.dstport", "tcp.flags.syn", "tcp.flags.ack",
-          "tcp.flags.reset", "tcp.flags.fin")
+          "tcp.dstport", "udp.dstport", "tcp.flags")
 
 
 def frames(path):
@@ -74,7 +73,8 @@ class Evidence:
         self.syn = self.synack = self.rst = self.fin = 0
 
     def add(self, record):
-        _, length, src, dst, protocol, port, udp_port, syn, ack, rst, fin = record
+        _, length, src, dst, protocol, port, udp_port, flags = record
+        bits = int(flags, 0) if flags else 0
         self.n += 1
         self.bytes += int(length)
         proto = {"6": "TCP", "17": "UDP", "1": "ICMP"}.get(protocol, "OTHER")
@@ -86,17 +86,17 @@ class Evidence:
         if proto == "TCP":
             if port:
                 self.ports[port] += 1
-            if syn == "1" and ack != "1":
+            if bits & 0x02 and not bits & 0x10:
                 self.syn += 1
                 if dst:
                     self.syn_target[dst] += 1
                     if port:
                         self.syn_ports[dst].add(port)
-            if syn == "1" and ack == "1":
+            if bits & 0x02 and bits & 0x10:
                 self.synack += 1
-            if rst == "1":
+            if bits & 0x04:
                 self.rst += 1
-            if fin == "1":
+            if bits & 0x01:
                 self.fin += 1
         elif proto == "UDP" and udp_port:
             self.ports["udp:" + udp_port] += 1
@@ -236,6 +236,8 @@ def main_run(pcaps, series_path, detections_path, labels_path, output):
             "observed_top_destinations": ";".join(ip + ":" + str(n) for ip, n in dst_total.most_common(7)),
             "conclusion": "protocol_and_destination_evidence_only_not_attack_proof",
         })
+    if sum(v.syn + v.synack + v.rst + v.fin for v in accum.values()) == 0:
+        raise AssertionError("All inspected TCP flags are zero; abort protocol evidence report")
     output.mkdir(parents=True, exist_ok=True)
     save(output / "packet_window_features.csv", windows)
     save(output / "all_115_alert_packet_audit.csv", alerts)
