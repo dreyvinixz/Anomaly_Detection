@@ -129,3 +129,24 @@ do ataque; os 106 alertas não são falsos positivos confirmados**.
 A lista oficial não traz durações exaustivas; precisão, recall, F1 e
 verdadeiros/falsos positivos definitivos exigiriam rótulos por intervalo
 e confirmação de tráfego malicioso por destino.
+
+
+## Etapa 5 — Auditoria dos PCAPs por destino e protocolo
+
+O código em src/anomaly_detection/packet_evidence.py complementa a avaliação
+de PPS com **metadados de pacotes reais** das cinco capturas INSIDE. Examina
+os quatro eventos temporalmente próximos (IDs MIT 17, 24, 26, 36) e
+os 115 alertas, inclusive aqueles sem início de ataque em ±5 minutos.
+
+A checagem inclui TCP SYN/ACK/RST/FIN, TCP/UDP/ICMP, top IPs de destino,
+portas e taxas de SYN em pacotes por segundo. Também reconcilia os totais
+com o CSV da Etapa 2, sem enviar PCAPs/payloads ao Git.
+
+- [Metodologia, critérios e limites](docs/ETAPA_5.md)
+- [Resultados e gráficos de metadados de pacotes](reports/week2-1999/stage5-packet-evidence/README.md)
+- [Pipeline GitHub Actions](.github/workflows/packet-evidence.yml)
+
+Os fenótipos são categorias de triagem, não ground truth. Mesmo que um
+alerta coincida com um pico de SYN para o destino de um ataque, isto
+não comprova por si só que a sessão era maliciosa ou que o modelo a
+identificou corretamente.
