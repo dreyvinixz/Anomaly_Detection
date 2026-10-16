@@ -5,10 +5,10 @@ from anomaly_detection.packet_evidence import Evidence, phenotype, FIELDS
 
 
 def packet(protocol="6", dst="172.16.114.207", syn="1", ack="0", port="80"):
+    bits = (0x02 if syn == "1" else 0) | (0x10 if ack == "1" else 0)
     return ["921000000.500", "60", "198.51.100.2", dst, protocol,
             port if protocol == "6" else "", "53" if protocol == "17" else "",
-            syn if protocol == "6" else "", ack if protocol == "6" else "",
-            "0", "0"]
+            hex(bits) if protocol == "6" else ""]
 
 
 class PacketEvidenceTests(unittest.TestCase):
