@@ -1,0 +1,20 @@
+{
+  "windows": 6424,
+  "scored_windows": 6274,
+  "anomaly_windows": 115,
+  "alert_rate": 0.01833,
+  "mean_pps": 18.874888,
+  "median_pps": 8.525,
+  "max_pps": 401.716667,
+  "mae_pps": 6.131375,
+  "rmse_pps": 12.325926,
+  "ground_truth": "not integrated; no precision, recall or F1 reported",
+  "parameters": {
+    "alpha": 0.2,
+    "threshold": 4.5,
+    "warmup": 30,
+    "history": 120,
+    "scale_floor": 0.5,
+    "reset_gap_minutes": 5
+  }
+}
