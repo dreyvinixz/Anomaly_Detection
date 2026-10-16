@@ -121,7 +121,7 @@ jobs:
             echo "Already published: no changes."
           else
             git commit -m "results: version DARPA Week 2 series metrics and PPS graphs"
-            git push origin HEAD:feat/mvp-60s-ewma
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi
 
       - name: Write human-readable job summary
