@@ -1,0 +1,214 @@
+% Relatorio tecnico-cientifico — FURG / Engenharia de Computacao
+% Adaptacao editorial em LaTeX/abnTeX2; nao e modelo homologado do curso.
+% Compilar com: latexmk -pdf -interaction=nonstopmode -halt-on-error relatorio.tex
+\documentclass[12pt,oneside,a4paper,brazil]{abntex2}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,graphicx,booktabs,longtable,multirow,amsmath,amssymb,siunitx}
+\usepackage{microtype,indentfirst,graphicx,float,caption,array}
+\usepackage{xcolor,hyperref,url}
+\usepackage{setspace}
+\usepackage[left=3cm,top=3cm,right=2cm,bottom=2cm]{geometry}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue!50!black,citecolor=black,pdftitle={Deteccao Offline de Anomalias na DARPA 1999},pdfauthor={Equipe do projeto Anomaly Detection - FURG}}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.1cm}
+\OnehalfSpacing
+\sisetup{output-decimal-marker={,}}
+\newcommand{\pp}{\text{PPS}}
+\newcommand{\artifact}{\url{https://github.com/dreyvinixz/Anomaly_Detection}}
+\begin{document}
+\begin{titlingpage}
+\begin{center}
+{\large\bfseries UNIVERSIDADE FEDERAL DO RIO GRANDE -- FURG}\\[0.55cm]
+{\large ENGENHARIA DE COMPUTAÇÃO}\\[0.35cm]
+{\normalsize RELATÓRIO TÉCNICO-CIENTÍFICO --- ATIVIDADE PRÁTICA}\\
+\vspace{2.5cm}
+{\Large\bfseries DETECÇÃO OFFLINE DE ANOMALIAS EM TRÁFEGO DE REDE}\\[0.35cm]
+{\large Estudo experimental com o DARPA 1999, semana 2, em janelas de 60 segundos}\\
+\vspace{2.3cm}
+{\large\bfseries Equipe: \underline{\hspace{6.8cm}}}\\[0.5cm]
+{\normalsize Disciplina e docente: \underline{\hspace{6.0cm}}}\\
+\vfill
+{\normalsize Repositório e experimentos:}\\[0.25cm]
+{\small \artifact}\\
+\vfill
+{\large Rio Grande -- RS}\\[0.15cm]
+{\large 2026}
+\end{center}
+\end{titlingpage}
+\begin{resumo}
+Este relatório apresenta o desenvolvimento e a avaliação de um detector offline de anomalias em tráfego de rede, utilizando as cinco capturas \textit{inside tcpdump} da segunda semana de treinamento do DARPA 1999. Os pacotes são extraídos em fluxo por \textit{gzip} e TShark, agregados em janelas fixas de 60 segundos e expressos em pacotes por segundo (PPS). Um preditor de média móvel exponencial (EWMA) gera previsões causais, e os resíduos são pontuados por desvio absoluto mediano (MAD) móvel. Foram processados 7.275.137 pacotes em 6.424 janelas; 6.274 janelas foram pontuadas e 115 foram sinalizadas. O erro médio absoluto foi de 6,1314 PPS e a raiz do erro quadrático médio foi de 12,3259 PPS. A comparação temporal com 43 inícios de ataques oficialmente documentados encontrou quatro eventos associados a alertas em até cinco minutos. Auditoria independente de protocolos e destinos nas capturas originais demonstrou fortes assinaturas de tráfego SYN compatíveis com dois ataques SATAN e dois Neptune. São discutidas as limitações do \textit{ground truth}, a ausência de intervalos completos de ataque e a impossibilidade de obter métricas de classificação definitivas sem rótulos completos. O pipeline é reproduzível no GitHub Actions.
+
+\vspace{0.35cm}
+\noindent\textbf{Palavras-chave:} detecção de anomalias; segurança de redes; séries temporais; DARPA 1999; EWMA; MAD.
+\end{resumo}
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\clearpage
+\chapter{Introdução}
+A detecção de anomalias em redes consiste em identificar alterações relevantes em relação ao comportamento esperado do tráfego. Diferentemente de regras baseadas em assinaturas de ataques, uma estratégia estatística pode identificar desvios por meio de medidas agregadas, mesmo quando não se dispõe de amostras rotuladas de todas as classes de intrusão. Essa abordagem, porém, está sujeita a variações legítimas da rede, dificuldades de calibração e falsos alarmes.
+
+O conjunto DARPA 1999, disponibilizado pelo MIT Lincoln Laboratory, constitui um \textit{benchmark} histórico de experimentação em detecção de intrusões. A segunda semana de treinamento apresenta tráfego de fundo misturado a ataques documentados. Neste trabalho são processadas exclusivamente as capturas da interface \textit{inside}, de segunda-feira a sexta-feira, 8 a 12 de março de 1999 \cite{mitdados,mitataques}.
+
+O objetivo é construir um pipeline offline, documentar seus parâmetros e avaliar o comportamento do modelo de previsão de taxa de pacotes sob tráfego com ataques conhecidos. Objetivos específicos: (i) reproduzir a série de tráfego em janelas de 60 segundos; (ii) detectar anomalias por EWMA/MAD; (iii) medir MAE, RMSE e taxas de alerta; (iv) cruzar os alertas com 43 inícios oficiais; (v) investigar protocolos e destinos dos quatro eventos com maior correspondência; e (vi) explicitar limites de interpretação científica.
+
+\chapter{Materiais e métodos}
+\section{Dataset e proveniência}
+Foram utilizadas cinco capturas \textit{inside tcpdump}, com nomes \texttt{monday} a \texttt{friday}, referentes à segunda semana de treinamento de 1999. Os arquivos comprimidos foram baixados diretamente do repositório do MIT. A integridade foi verificada com \texttt{gzip -t} e hashes SHA-256 registrados nos resultados. Todos os processamentos automáticos ocorreram em \textit{runners} Ubuntu do GitHub Actions, com scripts Python e TShark; dados brutos não foram incluídos no versionamento.
+
+\section{Extração e agregação temporal}
+Em vez de descompactar e concatenar binariamente vários arquivos PCAP, cada captura foi lida sequencialmente por um pipeline de fluxo:
+\begin{quote}\ttfamily\small gzip -dc inside.tcpdump.gz | tshark -r - -T fields -e frame.time\_epoch -e frame.len\end{quote}
+Para cada pacote de instante de captura $t$ (\textit{epoch} em segundos), definiu-se a janela UTC
+\begin{equation}
+  b(t)=60\left\lfloor\frac{t}{60}\right\rfloor.
+\end{equation}
+Sejam $N_k$ o número de pacotes da janela $k$ e $B_k$ a soma dos comprimentos dos quadros. A característica principal foi
+\begin{equation}
+ x_k = \frac{N_k}{60}\quad [\text{pacotes/s}],\qquad v_k=\frac{B_k}{60}\quad [\text{bytes/s}].
+\end{equation}
+A série preserva a ordem cronológica, registra o dia de origem e evita preencher longos períodos sem coleta como se fossem tráfego zero. Foram identificados quatro intervalos entre janelas observadas, somando 656 minutos não representados por medições no CSV. A origem da coleta e os horários locais foram conciliados com UTC e \texttt{America/New\_York}.
+
+\section{Modelo preditivo EWMA}
+O valor esperado é uma previsão causal de um passo à frente:
+\begin{equation}
+ \widehat{x}_k=\alpha x_{k-1}+(1-\alpha)\widehat{x}_{k-1},\qquad e_k=x_k-\widehat{x}_k.
+\end{equation}
+O parâmetro padrão é $\alpha=0{,}2$. A previsão não utiliza o PPS da janela atual para produzir sua própria estimativa. Em lacunas prolongadas, o estado é reiniciado. Após cada reinício, 30 janelas compõem o período de aquecimento sem avaliação de alerta.
+
+\section{Detector robusto por MAD}
+Seja $H_k$ a amostra dos resíduos históricos válidos, limitada a 120 elementos e excluindo alertas anteriores. A mediana local $m_k$ e o desvio absoluto mediano $d_k$ são definidos por
+\begin{equation}
+ m_k=\operatorname{mediana}(H_k),\qquad d_k=\operatorname{mediana}_{e\in H_k}|e-m_k|.
+\end{equation}
+A estatística robusta e a regra de decisão são
+\begin{equation}
+ s_k=\frac{|e_k-m_k|}{\max(1{,}4826d_k;\,0{,}5)},\qquad a_k=\mathbb{I}[s_k>4{,}5].
+\end{equation}
+A constante 1,4826 normaliza o MAD sob hipótese aproximadamente normal. O piso de escala de 0,5 PPS impede divergência por valores muito baixos do MAD. O detector sinaliza uma \emph{anomalia volumétrica}; por si só, não confirma invasão nem identifica sua origem.
+
+\section{Critérios de validação e métricas}
+A qualidade preditiva foi medida sobre janelas pontuáveis por erro médio absoluto e raiz do erro quadrático médio:
+\begin{equation}
+\operatorname{MAE}=\frac1n\sum_{k=1}^{n}|e_k|,\qquad
+\operatorname{RMSE}=\sqrt{\frac1n\sum_{k=1}^{n}e_k^2}.
+\end{equation}
+A taxa de alertas é $\sum a_k/n$. Não se confunde com precisão de detecção, taxa de ataques ou taxa de falsos positivos.
+
+O MIT documenta 43 ocorrências pelo instante inicial, nome e destino, mas essa lista, isoladamente, não fornece início e fim de todas as sessões maliciosas \cite{mitataques}. Para análise exploratória, uma correspondência temporal é definida quando uma janela sinalizada está a até $\pm5$ minutos do minuto de início informado, dentro da mesma captura. A avaliação também apresenta tolerâncias de $0,1,10,30$ minutos. Um alerta sem correspondência de início não é automaticamente classificado como falso positivo.
+
+\chapter{Resultados e discussão}
+\section{Volume processado}
+A Tabela \ref{tab:volume} resume os cinco arquivos. As 6.424 janelas registradas não incluem os quatro intervalos de coleta ausente.
+\begin{table}[H]\centering\caption{Pacotes e janelas de 60 segundos por captura.}\label{tab:volume}
+\begin{tabular}{lrrr}\toprule
+Dia & Pacotes & Janelas & PPS médio \\ \midrule
+Segunda-feira & 1.753.377 & 1.320 & 22,1386 \\
+Terça-feira & 1.585.120 & 1.144 & 23,0932 \\
+Quarta-feira & 1.011.149 & 1.320 & 12,7670 \\
+Quinta-feira & 1.563.069 & 1.320 & 19,7357 \\
+Sexta-feira & 1.362.422 & 1.320 & 17,2023 \\ \midrule
+\textbf{Total} & \textbf{7.275.137} & \textbf{6.424} & \textbf{18,8749} \\
+\bottomrule\end{tabular}
+\end{table}
+\begin{figure}[H]\centering\includegraphics[width=\textwidth]{figures/semana_pps.png}\caption{PPS observado, previsão EWMA e janelas sinalizadas. As linhas não atravessam as interrupções entre arquivos diários. Fonte: processamento experimental dos PCAPs DARPA 1999.}\label{fig:semana}\end{figure}
+\begin{figure}[H]\centering\includegraphics[width=0.94\textwidth]{figures/comparativo_pps.png}\caption{Comparação entre PPS médio e máximo por dia. Fonte: elaboração dos autores com os dados processados.}\end{figure}
+
+\section{Desempenho preditivo e volume de alertas}
+Com $\alpha=0{,}2$, limiar MAD 4,5 e 30 janelas de aquecimento por captura, foram avaliadas 6.274 janelas. Destas, 115 receberam alerta (1,833\%). O MAE foi 6,1314 PPS, e o RMSE, 12,3259 PPS. O PPS mediano foi 8,525 e o máximo, 401,7167. O maior pico foi observado em 10 de março de 1999, às 17h02 UTC.
+
+\begin{table}[H]\centering\caption{Resumo da avaliação EWMA/MAD padrão.}\begin{tabular}{lr}\toprule
+Medida & Resultado \\ \midrule
+Janelas totais / pontuadas & 6.424 / 6.274 \\
+Janelas de aquecimento & 150 \\
+Alertas gerados & 115 \\
+Taxa de alertas & 1,833\% \\
+MAE & 6,1314 PPS \\
+RMSE & 12,3259 PPS \\
+PPS máximo & 401,7167 \\
+\bottomrule\end{tabular}\end{table}
+
+\section{Correspondência com os inícios oficiais}
+Os 43 inícios oficiais ocorreram dentro de períodos cobertos pelas capturas; 38 tinham janela inicial pontuável, enquanto cinco ficaram em aquecimento. À tolerância $\pm5$ minutos, quatro inícios estavam próximos de pelo menos um alerta; nove dos 115 alertas ocorreram dentro dessas vizinhanças, e 106 não. A proporção descritiva de inícios pontuáveis com alerta próximo foi $4/38\approx10,53\%$, \textbf{não} uma estimativa de \textit{recall} de ataques completos.
+\begin{table}[H]\centering\caption{Proximidade entre alertas e inícios documentados pelo MIT.}\begin{tabular}{rrrr}\toprule
+Tolerância (min) & Inícios próximos & Alertas próximos & Fora da vizinhança \\ \midrule
+0 & 3 & 3 & 112 \\
+1 & 4 & 6 & 109 \\
+5 & 4 & 9 & 106 \\
+10 & 7 & 13 & 102 \\
+30 & 11 & 24 & 91 \\
+\bottomrule\end{tabular}\end{table}
+\begin{figure}[H]\centering\includegraphics[width=0.88\textwidth]{figures/proximidade_eventos.png}\caption{Sensibilidade da correspondência de inícios à tolerância temporal.}\end{figure}
+\begin{figure}[H]\centering\includegraphics[width=0.9\textwidth]{figures/inicio_ataques.png}\caption{Séries diárias de PPS com linhas verticais marcando apenas \emph{inícios} de ataques oficiais e marcadores dos alertas. Não representam duração.}\end{figure}
+
+\section{Auditoria dos pacotes originais por destino e protocolo}
+Na etapa de aprofundamento foram relidos os 7.275.137 quadros, com reconciliação dos arquivos e de 150 janelas de interesse contra os CSVs originais. A primeira versão da auditoria utilizava interpretação incorreta de flags TCP; após correção para o campo numérico \texttt{tcp.flags} e suas máscaras de bits, os resultados foram reproduzidos e publicados no repositório. A Tabela \ref{tab:packet} apresenta a extração corrigida.
+
+\begin{table}[H]\centering\caption{Evidências nos alvos dos quatro eventos candidatos, acumuladas em seis minutos.}\label{tab:packet}
+\resizebox{\textwidth}{!}{\begin{tabular}{llrrr}\toprule
+Evento & Destino (IPv4) & Pacotes ao IP & SYN sem ACK ao IP & Portas distintas com SYN \\ \midrule
+SATAN \#17 & 172.16.114.50 & 13.543 & 10.463 & 9.999 \\
+SATAN \#24 & 172.16.114.50 & 12.378 & 10.055 & 9.997 \\
+Neptune \#26 & 172.16.114.207 & 10.740 & 10.242 & 1.024 \\
+Neptune \#36 & 172.16.114.50 & 12.231 & 10.270 & 1.046 \\
+\bottomrule\end{tabular}}\end{table}
+O destino \texttt{pigeon.eyrie.af.mil} do evento Neptune \#26 é identificado como 172.16.114.207 no inventário oficial. A associação de \texttt{marx.eyrie.af.mil} ao IPv4 172.16.114.50 é corroborada pelo tráfego observado e por literatura secundária, mas não consta na lista de hosts internos consultada, sendo registrada com menor confiança do que o mapeamento oficial \cite{mithosts,repo}.
+
+\begin{figure}[H]\centering\includegraphics[width=.9\textwidth]{figures/evidencia_syn.png}\caption{Comparação da taxa média de SYN sem ACK antes e após os inícios dos quatro eventos. Os intervalos de 5 e 6 minutos são janelas de observação, não durações oficiais.}\end{figure}
+Os casos SATAN exibiram grandes quantidades de tentativas SYN para portas distintas; os dois Neptune apresentaram altas contagens de SYN concentradas nos destinos. Esses perfis são coerentes com varredura e inundação SYN, respectivamente. Não é possível concluir que \emph{todos} os pacotes nesses intervalos sejam maliciosos sem identificar sessões e limites temporais exatos.
+
+\section{Investigação dos 115 alertas e sensibilidade}
+A auditoria agrupou os 115 alertas em 33 desvios relativos de baixo volume, 38 janelas predominantemente UDP e 44 janelas de tráfego misto. Essas categorias descrevem tráfego, não verdadeiros ou falsos positivos.
+
+Foram executadas 27 combinações de $\alpha\in\{0{,}1;0{,}2;0{,}4\}$, limiar $\in\{3;4{,}5;6\}$ e aquecimento $\in\{15;30;60\}$. Com $\alpha=0{,}2$ e aquecimento de 30 janelas, reduzir o limiar de 4,5 para 3 aumentou os alertas de 115 para 280 e as correspondências temporais de inícios de 4 para 12, com custo de volume maior de alertas. Isso \textbf{não comprova aumento de precisão}, nem equivale a seleção independente de hiperparâmetros.
+
+\chapter{Rotulagem e validade das métricas}
+\section{Categorias de evidência}
+Para não induzir métricas incorretas, são propostas categorias explícitas:\begin{enumerate}
+\item \textbf{Início oficial documentado:} evento com instante e alvo registrado pelo MIT, sem inferir duração.
+\item \textbf{Evento com correspondência temporal:} alerta em uma vizinhança do início oficial, mas sem atribuição protocolar.
+\item \textbf{Evento corroborado por protocolo/destino:} coincidência de início, endereço de destino sustentado por fonte e padrão de tráfego consistente com o ataque. Os quatro casos da Tabela \ref{tab:packet} estão nesta categoria, sem equivaler a rótulos completos de pacote.
+\item \textbf{Janela não rotulada:} janela sem confirmação independente de benignidade/malícia. Os 106 alertas sem início próximo permanecem nessa situação.
+\item \textbf{Controle negativo documentado:} captura de semanas identificadas pelo MIT como livres de ataques (semanas 1 e 3), que permite medir taxa de alertas em períodos descritos como normais, sem supor que toda a semana 2 fora dos inícios seja normal \cite{mitdados}.
+\end{enumerate}
+
+\section{Precisão, recall e F1: quando são válidos?}
+Se um conjunto de $n$ janelas possuísse rótulos binários exaustivos e independentes $y_k\in\{0,1\}$, seria possível calcular $TP$, $FP$, $TN$, $FN$ e
+\begin{equation}
+ \text{Precisão}=\frac{TP}{TP+FP},\qquad\text{Recall}=\frac{TP}{TP+FN},\qquad
+ F_1=\frac{2TP}{2TP+FP+FN}.
+\end{equation}
+Entretanto, a lista de 43 inícios não rotula completamente as 6.424 janelas; preencher as demais como negativas por exclusão cria rótulos falsos. Além disso, uma janela de PPS global pode conter pacotes legítimos e maliciosos simultaneamente. \textbf{Portanto, este relatório não apresenta precisão, recall ou F1 definitivos de detecção de intrusões.} O \textit{ground truth} completo exigiria intervalos de ataque e correlação por fluxo/host, ou uma base independente com verdade de terreno explícita.
+
+\section{Controle negativo independente}
+O estudo recomenda o processamento das semanas 1 e 3, designadas livres de ataques na documentação do MIT, aplicando os mesmos parâmetros, janelas e reinicialização de estado. Essa abordagem mede uma taxa de alertas em tráfego de controle negativo e pode ajudar a compreender falsos alarmes nesse domínio sintético. \textbf{Os números de controle negativo não são fornecidos neste relatório porque não haviam sido verificados no momento do fechamento}; o workflow correspondente pode publicar posteriormente as taxas medidas. Avaliar as semanas de controle não resolve, por si só, a classificação de todos os alertas na semana 2.
+
+\chapter{Reprodutibilidade e limitações}
+O repositório \artifact\ reúne código-fonte comentado, testes, documentação, extração das características e scripts de visualização. A execução é acionada por workflows GitHub Actions. A série processada e os gráficos são versionados, ao passo que os PCAPs originais permanecem no servidor do MIT.
+
+\begin{enumerate}
+\item Requer-se Python 3.11, TShark, gzip e Matplotlib; instalar com \texttt{pip install -e .}.
+\item Processar a semana 2 com \texttt{darpa-anomaly download}, \texttt{darpa-anomaly preprocess}, \texttt{darpa-anomaly detect} e \texttt{darpa-anomaly plot}.
+\item Executar \texttt{python -m anomaly\_detection.evaluate\_week2} para reproduzir análise de inícios e grade de parâmetros.
+\item Executar \texttt{python -m anomaly\_detection.packet\_evidence} para auditoria de metadados dos pacotes originais.
+\item Executar testes unitários com \texttt{python -m unittest discover -s tests -v}.
+\end{enumerate}
+
+As limitações centrais são: (i) \textit{benchmark} sintético de 1999; (ii) uso inicial de apenas PPS, sem informações de conexões por host; (iii) adaptação do EWMA durante tráfego anômalo; (iv) sensibilidade ao limiar e ao aquecimento; (v) disponibilidade de rótulos apenas parciais para a semana 2; (vi) lacunas de captura que não devem ser imputadas como valores zero. Além disso, verificações de associação evento--alerta próximas no tempo não determinam o início ou fim verdadeiro de cada ataque.
+
+\chapter{Conclusão}
+O projeto demonstrou a viabilidade de um detector de anomalias offline e reproduzível para séries de pacotes por segundo, com processamento integral de cinco capturas originais, experimentação com 27 configurações e validação de quatro eventos por comportamento de tráfego e destino. O modelo produz 115 alertas, com MAE de 6,1314 PPS e RMSE de 12,3259 PPS. Os resultados reforçam a utilidade de análise volumétrica para SATAN e Neptune, porém também evidenciam que \emph{anomalia} não é sinônimo de \emph{ataque}. A contribuição mais importante da avaliação está na distinção entre correspondência temporal, evidência protocolar e rotulagem exaustiva. Para concluir a avaliação com precisão/recall/F1, seria necessária verdade de terreno independente por intervalo/sessão e um protocolo de teste sem vazamento temporal.
+
+\addcontentsline{toc}{chapter}{Referências}
+\begin{thebibliography}{9}
+\bibitem{mitdados} MIT LINCOLN LABORATORY. \textit{1999 DARPA Intrusion Detection Evaluation Dataset}. Disponível em: \url{https://www.ll.mit.edu/r-d/datasets/1999-darpa-intrusion-detection-evaluation-dataset}. Acesso em: 15 out. 2026.
+\bibitem{mitataques} MIT LINCOLN LABORATORY. \textit{Labeled attacks from 2nd week of training data / Detections list}. Disponível em: \url{https://archive.ll.mit.edu/ideval/docs/detections_1999.html}. Acesso em: 15 out. 2026.
+\bibitem{mithosts} MIT LINCOLN LABORATORY. \textit{Simulation network hosts (1999)}. Disponível em: \url{https://archive.ll.mit.edu/ideval/docs/hosts_1999.html}. Acesso em: 15 out. 2026.
+\bibitem{evalplan} MIT LINCOLN LABORATORY. \textit{Off Line 1999 Evaluation Plan}. Disponível em: \url{https://archive.ll.mit.edu/ideval/docs/id99-eval-ll.html}. Acesso em: 15 out. 2026.
+\bibitem{repo} ANOMALY DETECTION. \textit{DARPA 1999 Week 2: código, dados processados e experimentos}. GitHub, 2026. Disponível em: \url{https://github.com/dreyvinixz/Anomaly_Detection}. Acesso em: 15 out. 2026.
+\bibitem{templatefurg} FIORENTIN, A. T. G. \textit{Modelo de Artigo Científico -- PPGE/FURG}. Overleaf. Disponível em: \url{https://pt.overleaf.com/latex/templates/modelo-de-artigo-cientifico-ppge-slash-furg/pvtvqbxymtkf}. Acesso em: 15 out. 2026.
+\bibitem{abntex} ABNTEX2. \textit{Modelos de relatórios técnicos e trabalhos acadêmicos}. Disponível em: \url{https://github.com/abntex/abntex2}. Acesso em: 15 out. 2026.
+\end{thebibliography}
+\vspace{1cm}
+\noindent\textit{Nota editorial:} a capa e a apresentação foram adaptadas para a FURG com base em referências públicas e na classe \texttt{abntex2}; não se trata de template oficial homologado para esta atividade. Os campos de equipe, disciplina e docente devem ser preenchidos antes da entrega.
+\end{document}
