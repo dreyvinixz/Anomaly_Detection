@@ -1,0 +1,109 @@
+name: DARPA 1999 - attack-free negative controls Weeks 1 and 3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/furg-academic-delivery
+    paths:
+      - .github/workflows/negative-controls.yml
+
+permissions:
+  contents: write
+
+jobs:
+  control:
+    strategy:
+      fail-fast: false
+      matrix:
+        week: [1, 3]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark gzip
+          python -m pip install -e .
+      - name: Unit tests (no downloads)
+        run: python -m unittest discover -s tests -v
+      - name: Process designated attack-free week
+        run: |
+          python -m anomaly_detection.negative_control \
+            --week ${{ matrix.week }} \
+            --output reports/negative-control/week${{ matrix.week }}
+      - name: Upload control metrics, without original PCAP files
+        uses: actions/upload-artifact@v4
+        with:
+          name: negative-control-week${{ matrix.week }}
+          path: reports/negative-control/week${{ matrix.week }}/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    runs-on: ubuntu-24.04
+    needs: control
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Week 1 output
+        uses: actions/download-artifact@v4
+        with:
+          name: negative-control-week1
+          path: reports/negative-control/week1
+      - name: Download Week 3 output
+        uses: actions/download-artifact@v4
+        with:
+          name: negative-control-week3
+          path: reports/negative-control/week3
+      - name: Audit scope, denominators and combined results
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          one=json.loads(Path("reports/negative-control/week1/summary.json").read_text())
+          three=json.loads(Path("reports/negative-control/week3/summary.json").read_text())
+          for x, week in [(one,1),(three,3)]:
+              assert f"Week {week}" in x["dataset"]
+              assert x["windows"] >= x["scored_windows"] > x["alert_windows"] >= 0
+              assert sum(d["packets"] for d in x["per_day"].values()) == x["packets"]
+          total=one["scored_windows"]+three["scored_windows"]
+          alerts=one["alert_windows"]+three["alert_windows"]
+          combined={
+              "weeks": [1,3],
+              "basis": "MIT 1999 training weeks officially designated attack-free",
+              "scored_windows": total,
+              "alert_windows": alerts,
+              "alert_rate_on_negative_controls": round(alerts/total,8),
+              "limitations": "Not a Week 2 precision, recall or F1 score; not independent packet-level truth",
+          }
+          Path("reports/negative-control/summary.json").write_text(json.dumps(combined,indent=2)+"\n")
+          Path("reports/negative-control/README.md").write_text(
+              "# Controlos negativos: semanas 1 e 3\n\n"
+              f"Janelas avaliadas: {total:,}. Alertas: {alerts:,}. "
+              f"Taxa de alertas nas semanas descritas como livres de ataques: "
+              f"{alerts/total:.4%}.\n\n"
+              "Não extrapolar para F1, precisão ou falsos positivos da semana 2. "
+              "Ver README das semanas e documentação oficial MIT.\n"
+          )
+          print(json.dumps(combined,indent=2))
+          PY
+      - name: Version only results and methodology
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f reports/negative-control
+          if git diff --cached --quiet; then
+            echo "Already versioned."
+          else
+            git commit -m "results: measure EWMA/MAD alert rate on MIT attack-free Weeks 1 and 3"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
