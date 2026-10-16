@@ -93,3 +93,29 @@ rotulações de sessões confiáveis, explicitando seu grau de cobertura.
 
 A lista de 43 inícios documentados, por si só, **não** justifica métricas de
 classificação supervisionada das 6.424 janelas.
+
+
+## Resultado medido em 15/10/2026
+
+A [execução na nuvem](https://github.com/dreyvinixz/Anomaly_Detection/actions/runs/38828048119)
+aprovou os testes e reproduziu o snapshot original da Etapa 2:
+
+- 43 horários oficiais integrados e presentes em períodos capturados;
+- 38 janelas iniciais efetivamente pontuadas (5 em warmup);
+- 4 eventos com alerta a ±5 minutos do início oficial (4/38 inícios pontuáveis);
+- 9 janelas de alerta perto de algum início e 106 não associadas a essa janela;
+- 27 configurações executadas e tabelas/gráficos de sensibilidade publicados.
+
+Com alpha=0.2 e warmup=30, threshold=4.5 produz 115 alertas e 4
+eventos temporalmente próximos; threshold=3.0 produz 280 alertas e
+12 eventos próximos. Isso NÃO estabelece melhor precisão, pois alertas
+adicionais podem ser legítimos e o dataset não tem rótulos de
+intervalo completos nessa tabela.
+
+**Comparabilidade:** MAE e RMSE foram medidos nas janelas pontuadas.
+Configurações com warmup diferente avaliam subconjuntos diferentes,
+logo diferenças entre warmups não devem ser interpretadas isoladamente
+como melhoria de previsão.
+
+A interpretação central permanece: foi calculada cobertura de proximidade
+temporal, e **não** uma taxa de detecção confirmada de intrusões.
