@@ -93,6 +93,9 @@ jobs:
             echo 'Identical results already tracked'
           else
             git commit -m 'results: audit four attack candidates and 115 anomalies using original PCAP metadata'
+            # Rebase generated commit on the latest branch (docs may have advanced).
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
             git push origin "HEAD:$GITHUB_REF_NAME"
           fi
 
