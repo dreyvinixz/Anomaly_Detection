@@ -1,0 +1,102 @@
+name: DARPA 1999 - ground truth and sensitivity (Stages 3-4)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/ground-truth-evaluation-stage3-4
+    paths:
+      - .github/workflows/evaluate-week2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate:
+    name: Reproduce 43 official onsets and 27 experiments
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository and fixed Stage 2 snapshot
+        uses: actions/checkout@v4
+
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Analyze official attack starts and EWMA/MAD hyperparameters
+        run: |
+          python -m anomaly_detection.evaluate_week2 \
+            --labels data/ground_truth/darpa1999_week2_official_attack_starts.csv \
+            --detections reports/week2-1999/results/detections.csv \
+            --series reports/week2-1999/data/traffic_60s.csv \
+            --output reports/week2-1999/stage3-4
+
+      - name: Assert scientific outputs and no unsupported FP claims
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          out = Path('reports/week2-1999/stage3-4')
+          s = json.loads((out / 'summary.json').read_text())
+          b = s['baseline']
+          assert b['official_onsets'] == 43
+          assert b['captured_onsets'] <= 43
+          assert b['scorable_onsets'] <= b['captured_onsets']
+          assert b['matched_onsets_all'] <= 43
+          assert b['matched_alert_windows'] + b['unassociated_alert_windows'] == 115
+          with (out / 'hyperparameter_grid.csv').open(newline='') as handle:
+              grid = list(csv.DictReader(handle))
+          assert len(grid) == 27
+          baseline = [x for x in grid if float(x['alpha']) == 0.2
+                      and float(x['threshold']) == 4.5 and int(x['warmup']) == 30]
+          assert len(baseline) == 1
+          assert int(baseline[0]['alert_windows']) == 115
+          for image in ('attack_onsets_pps.png', 'sensitivity_prediction_error_pps.png',
+                        'sensitivity_thresholds.png'):
+              assert (out / 'figures' / image).stat().st_size > 1000
+          text = (out / 'README.md').read_text()
+          assert 'não' in text.lower()
+          print('All 43 labels, 27 configurations, 115 baseline alerts and PNG outputs verified.')
+          PY
+
+      - name: Version real results in Git (preserve snapshots despite gitignore)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f reports/week2-1999/stage3-4/
+          if git diff --cached --quiet; then
+            echo 'No changes to generated reports.'
+          else
+            git commit -m 'results: add reproducible official-onset evaluation and 27 sensitivity experiments'
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Publish short summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          summary = Path('reports/week2-1999/stage3-4/summary.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write('# DARPA Week 2 — Ground truth & sensitivity\n\n')
+              if summary.exists():
+                  b = json.loads(summary.read_text())['baseline']
+                  output.write(f"- Official attack starts: {b['official_onsets']}\n")
+                  output.write(f"- Captured: {b['captured_onsets']}; scorable: {b['scorable_onsets']}\n")
+                  output.write(f"- Start-near-alert matches ±5 min: {b['matched_onsets_all']}\n")
+                  output.write(f"- Alerts outside start windows: {b['unassociated_alert_windows']}\n")
+                  output.write('- Unassociated alerts are NOT verified false positives.\n')
+                  output.write('- No confirmed attack precision/recall/F1 computed.\n')
+              else:
+                  output.write('Results unavailable; inspect failed job.\n')
+          PY

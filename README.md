@@ -105,3 +105,27 @@ períodos sem captura. Os dados brutos compactados não são versionados.
 **Interpretação importante:** 115 alertas não equivalem a 115 ataques.
 A correspondência com o ground truth documentado pelo MIT permanece
 pendente e será tratada na etapa seguinte.
+
+
+## Etapas 3 e 4 — 43 ataques oficiais e experimentos estatísticos
+
+O conjunto de 43 inícios de ataques documentados pelo MIT foi integrado,
+alinhado ao horário UTC e comparado com os 115 alertas da Etapa 2.
+A execução do GitHub Actions reproduziu a configuração original e avaliou
+**27 combinações** de alpha, limiar MAD e warmup.
+
+Na configuração original, **43/43 inícios ocorreram com captura ativa**,
+**38/43 estavam fora do warmup** e **4/38 inícios pontuáveis tinham algum
+alerta na janela de ±5 minutos**. Nove dos 115 alertas estavam dentro
+dessas proximidades e 106 fora. **A proximidade não comprova detecção
+do ataque; os 106 alertas não são falsos positivos confirmados**.
+
+- [Relatório e gráficos reais das Etapas 3/4](reports/week2-1999/stage3-4/README.md)
+- [Metodologia e ressalvas sobre ground truth](docs/ETAPAS_3_4.md)
+- [Lista dos 43 inícios oficiais](data/ground_truth/darpa1999_week2_official_attack_starts.csv)
+- [Grid experimental (27 configurações)](reports/week2-1999/stage3-4/hyperparameter_grid.csv)
+- [Workflow reprodutível](.github/workflows/evaluate-week2.yml)
+
+A lista oficial não traz durações exaustivas; precisão, recall, F1 e
+verdadeiros/falsos positivos definitivos exigiriam rótulos por intervalo
+e confirmação de tráfego malicioso por destino.
