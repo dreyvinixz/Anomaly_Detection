@@ -1,0 +1,57 @@
+{
+  "dataset": "DARPA 1999 Week 3 INSIDE (MIT-designated attack-free)",
+  "source": "https://archive.ll.mit.edu/ideval/data/1999/training/week3/index.html",
+  "label_scope": "MIT states attack-free WEEK; not per-packet independently verified",
+  "packets": 8982726,
+  "windows": 6195,
+  "scored_windows": 6045,
+  "alert_windows": 179,
+  "alert_rate_on_attack_free": 0.02961125,
+  "possible_false_alarm_rate_control_only": 0.02961125,
+  "limitations": "Not a Week2 precision/F1 or a proof that all Week2 distant alerts are false.",
+  "parameters": {
+    "alpha": 0.2,
+    "threshold": 4.5,
+    "warmup": 30,
+    "history": 120,
+    "scale_floor_pps": 0.5,
+    "gap_reset_min": 5
+  },
+  "per_day": {
+    "monday": {
+      "packets": 2106744,
+      "windows": 1320,
+      "scored_windows": 1290,
+      "alerts": 49,
+      "alert_rate_on_attack_free": 0.0379845
+    },
+    "tuesday": {
+      "packets": 1831648,
+      "windows": 1320,
+      "scored_windows": 1290,
+      "alerts": 79,
+      "alert_rate_on_attack_free": 0.06124031
+    },
+    "wednesday": {
+      "packets": 1849753,
+      "windows": 1320,
+      "scored_windows": 1290,
+      "alerts": 23,
+      "alert_rate_on_attack_free": 0.01782946
+    },
+    "thursday": {
+      "packets": 1559156,
+      "windows": 1212,
+      "scored_windows": 1182,
+      "alerts": 9,
+      "alert_rate_on_attack_free": 0.00761421
+    },
+    "friday": {
+      "packets": 1635425,
+      "windows": 1023,
+      "scored_windows": 993,
+      "alerts": 19,
+      "alert_rate_on_attack_free": 0.01913394
+    }
+  }
+}

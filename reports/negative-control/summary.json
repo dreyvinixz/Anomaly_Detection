@@ -1,0 +1,11 @@
+{
+  "weeks": [
+    1,
+    3
+  ],
+  "basis": "MIT 1999 training weeks officially designated attack-free",
+  "scored_windows": 12496,
+  "alert_windows": 258,
+  "alert_rate_on_negative_controls": 0.02064661,
+  "limitations": "Not a Week 2 precision, recall or F1 score; not independent packet-level truth"
+}
