@@ -1,5 +1,11 @@
 # Anomaly Detection — DARPA 1999
 
+**Equipe:** Andrey Vinicius Santos Souza e Théo Corvello Soares  
+**Disciplina:** Métodos de Autenticação e Segurança em Redes — EaD, Turma U  
+**Docente:** Prof. Dr. Bruno L. Dalmazo  
+**Instituição:** Universidade Federal do Rio Grande (FURG)
+
+
 Detector offline para tráfego da segunda semana (8 a 12 de março de 1999)
 do DARPA 1999, usando somente os cinco arquivos **inside tcpdump**.
 A granularidade é **60 segundos** e os gráficos mostram **pacotes por
