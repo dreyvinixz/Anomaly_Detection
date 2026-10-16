@@ -119,3 +119,30 @@ como melhoria de previsão.
 
 A interpretação central permanece: foi calculada cobertura de proximidade
 temporal, e **não** uma taxa de detecção confirmada de intrusões.
+
+
+## Eventos com correspondência temporal na configuração original
+
+Para alpha=0.2, threshold=4.5, warmup=30, ±5 minutos em torno do
+início oficial:
+
+| MIT ID | Ataque | Início oficial (EST) | Janela sinalizada (UTC) | PPS | Distância (buckets de 1 min) |
+|---:|---|---|---|---:|---:|
+| 17 | satan | 10/03/1999 12:02:13 | 10/03/1999 17:02 | 401.7167 | 0 |
+| 24 | satan | 11/03/1999 09:33:17 | 11/03/1999 14:33 | 394.7833 | 0 |
+| 26 | neptune | 11/03/1999 11:04:16 | 11/03/1999 16:05 | 161.1833 | 1 |
+| 36 | neptune | 12/03/1999 11:20:15 | 12/03/1999 16:20 | 106.5333 | 0 |
+
+São associações **plausíveis, mas NÃO verificadas por endereço de destino**.
+O algoritmo base usa PPS agregado, de modo que tráfego legítimo
+concorrente poderia explicar um pico coincidente.
+
+Cinco inícios oficiais ficaram em janelas de aquecimento e não puderam
+receber score válido nesse instante: IDs 1 (NTinfoscan), 23 (crashiis),
+32 (phf), 33 (perl console) e 34 (ps console). Esta falta de pontuação
+não prova ausência de tráfego malicioso.
+
+**Próxima investigação prioritária:** analisar os destinos e protocolos
+nas capturas INSIDE correspondentes aos quatro eventos e os alertas
+não associados a inícios documentados, antes de atribuir rótulos de
+verdadeiro ou falso positivo.
