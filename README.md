@@ -52,7 +52,7 @@ python -m unittest discover -s tests -v
 
 A metodologia e limitações estão em docs/METHODOLOGY.md.
 
-**Status:** baseline inicial. Os ataques oficiais ainda não estão
+**Status:** pipeline e Etapa 2 executados com o dataset real. Os ataques oficiais ainda não estão
 integrados como ground truth e a avaliação no dataset completo ainda
 precisa ser executada. Nenhuma métrica real do DARPA foi inventada.
 
