@@ -7,6 +7,8 @@ on:
       - feat/pcap-packet-evidence-stage5
     paths:
       - .github/workflows/packet-evidence.yml
+      - src/anomaly_detection/packet_evidence.py
+      - tests/test_packet_evidence.py
 
 permissions:
   contents: write
