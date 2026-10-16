@@ -1,0 +1,5 @@
+84f672577e52dafea17d1a7380dffcbff839bd234233d1fadc894c9b67129cdc  data/raw/friday/inside.tcpdump.gz
+3a5f783944545d10fe74b5d6675644dfeac737f8717a1e69a4491ed2268b294e  data/raw/monday/inside.tcpdump.gz
+76a31426f13d38a2e39fa09d8715b9ca474ac30f4db4aa8bb5130e9b31803bff  data/raw/thursday/inside.tcpdump.gz
+c352c728dd48762ed252b843e8fd17e6b3a1cdd0d8ec98299dbe7fcef0cc8c9f  data/raw/tuesday/inside.tcpdump.gz
+1f4d258b673b670b951e53fceb8512df08d49af28abfe50fd1dc9d5b3dbc0b31  data/raw/wednesday/inside.tcpdump.gz

@@ -52,6 +52,56 @@ python -m unittest discover -s tests -v
 
 A metodologia e limitações estão em docs/METHODOLOGY.md.
 
-**Status:** baseline inicial. Os ataques oficiais ainda não estão
+**Status:** pipeline e Etapa 2 executados com o dataset real. Os ataques oficiais ainda não estão
 integrados como ground truth e a avaliação no dataset completo ainda
 precisa ser executada. Nenhuma métrica real do DARPA foi inventada.
+
+
+## Processamento integral no GitHub Actions
+
+O workflow [DARPA 1999 Week 2 - full offline analysis](.github/workflows/darpa-week2.yml)
+usa uma VM temporária Ubuntu 24.04 sem depender do computador local.
+Ele inicia automaticamente no primeiro push da configuração na branch
+feat/mvp-60s-ewma. Depois de integrado à main, novas execuções poderão
+ser iniciadas em **Actions > DARPA 1999 Week 2 > Run workflow**.
+
+Etapas automatizadas:
+1. Instalar TShark e dependências Python e executar testes unitários.
+2. Baixar cinco arquivos inside.tcpdump.gz de segunda a sexta.
+3. Verificar integridade de cada gzip e registrar SHA-256.
+4. Processar os PCAPs em streaming, em buckets UTC de 60 segundos.
+5. Auditar source_day, timestamps, cronologia e PPS = pacotes/60.
+6. Calcular EWMA/MAD, estatísticas e gráfico com eixo Y em PPS.
+7. Publicar o Artifact darpa-week2-60s-<run_id> com:
+   - data/processed/traffic_60s.csv
+   - results/capture_validation.json
+   - results/sha256sums.txt
+   - results/detections.csv e results/anomalies.csv
+   - results/metrics.json e results/figures/traffic_pps.png
+
+Os arquivos PCAP compactados NÃO são incluídos no Artifact nem em commits.
+Artefatos expiram após 14 dias. A fonte do MIT precisa aceitar downloads
+no ambiente GitHub-hosted; caso contrário o job mostrará o erro no log.
+A comparação com o ground truth oficial dos ataques continua pendente.
+
+
+## Etapa 2 — Resultados empíricos versionados (DARPA 1999 Week 2)
+
+A execução real no GitHub Actions foi concluída com sucesso: **7.275.137
+pacotes**, **6.424 janelas de 60 segundos** e **115 anomalias sinalizadas**
+em **6.274 janelas avaliadas**. MAE = 6,1314 PPS e RMSE = 12,3259 PPS.
+Os oito testes unitários foram aprovados.
+
+**Documentação científica com tabelas, gráficos e ressalvas:**
+[Etapa 2 — relatório e dados](reports/week2-1999/README.md)
+([índice](docs/ETAPA_2.md)).
+
+Os CSVs, gráficos PNG, estatísticas JSON, checagens de integridade e
+auditoria temporal são versionados em reports/week2-1999/ pela automação
+[Publish Week 2 results](.github/workflows/publish-week2-results.yml).
+O arquivo traffic_pps_gap_aware.png evita linhas artificiais atravessando
+períodos sem captura. Os dados brutos compactados não são versionados.
+
+**Interpretação importante:** 115 alertas não equivalem a 115 ataques.
+A correspondência com o ground truth documentado pelo MIT permanece
+pendente e será tratada na etapa seguinte.

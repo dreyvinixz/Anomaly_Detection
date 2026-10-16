@@ -1,0 +1,88 @@
+{
+  "dataset": "DARPA 1999 Week 2 - inside tcpdump",
+  "granularity_seconds": 60,
+  "total_windows": 6424,
+  "total_packets": 7275137,
+  "gaps_count": 4,
+  "gaps_first_100": [
+    {
+      "after_epoch": 920977140,
+      "before_epoch": 920984400,
+      "missing_windows": 120
+    },
+    {
+      "after_epoch": 921052980,
+      "before_epoch": 921070800,
+      "missing_windows": 296
+    },
+    {
+      "after_epoch": 921149940,
+      "before_epoch": 921157200,
+      "missing_windows": 120
+    },
+    {
+      "after_epoch": 921236340,
+      "before_epoch": 921243600,
+      "missing_windows": 120
+    }
+  ],
+  "gaps_truncated": false,
+  "per_capture": {
+    "monday": {
+      "windows": 1320,
+      "packets": 1753377,
+      "bytes": 372992902,
+      "zero_windows": 0,
+      "first_utc": "1999-03-08T13:00:00+00:00",
+      "first_new_york": "1999-03-08T08:00:00-05:00",
+      "last_utc": "1999-03-09T10:59:00+00:00",
+      "last_new_york": "1999-03-09T05:59:00-05:00",
+      "mean_pps": 22.138598
+    },
+    "tuesday": {
+      "windows": 1144,
+      "packets": 1585120,
+      "bytes": 374742861,
+      "zero_windows": 0,
+      "first_utc": "1999-03-09T13:00:00+00:00",
+      "first_new_york": "1999-03-09T08:00:00-05:00",
+      "last_utc": "1999-03-10T08:03:00+00:00",
+      "last_new_york": "1999-03-10T03:03:00-05:00",
+      "mean_pps": 23.09324
+    },
+    "wednesday": {
+      "windows": 1320,
+      "packets": 1011149,
+      "bytes": 152977975,
+      "zero_windows": 0,
+      "first_utc": "1999-03-10T13:00:00+00:00",
+      "first_new_york": "1999-03-10T08:00:00-05:00",
+      "last_utc": "1999-03-11T10:59:00+00:00",
+      "last_new_york": "1999-03-11T05:59:00-05:00",
+      "mean_pps": 12.767033
+    },
+    "thursday": {
+      "windows": 1320,
+      "packets": 1563069,
+      "bytes": 326405874,
+      "zero_windows": 0,
+      "first_utc": "1999-03-11T13:00:00+00:00",
+      "first_new_york": "1999-03-11T08:00:00-05:00",
+      "last_utc": "1999-03-12T10:59:00+00:00",
+      "last_new_york": "1999-03-12T05:59:00-05:00",
+      "mean_pps": 19.73572
+    },
+    "friday": {
+      "windows": 1320,
+      "packets": 1362422,
+      "bytes": 269712914,
+      "zero_windows": 0,
+      "first_utc": "1999-03-12T13:00:00+00:00",
+      "first_new_york": "1999-03-12T08:00:00-05:00",
+      "last_utc": "1999-03-13T10:59:00+00:00",
+      "last_new_york": "1999-03-13T05:59:00-05:00",
+      "mean_pps": 17.202298
+    }
+  },
+  "note": "UTC versus America/New_York shown; official attack label timezone must be verified separately."
+}

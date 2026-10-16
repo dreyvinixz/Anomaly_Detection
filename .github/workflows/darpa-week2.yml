@@ -1,0 +1,131 @@
+name: DARPA 1999 Week 2 - full offline analysis
+
+# Initial push runs the experiment on the feature branch.
+# Once merged to main, Actions > Run workflow enables manual reruns.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/mvp-60s-ewma
+    paths:
+      - .github/workflows/darpa-week2.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: darpa-week2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  process-week2:
+    name: Download, validate, preprocess and detect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      PYTHONUNBUFFERED: "1"
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install TShark and project dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark gzip
+          python -m pip install -e .
+          tshark --version | head -n 3
+          df -h .
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Download the five inside TCPDUMP archives from MIT
+        run: |
+          darpa-anomaly download --data-dir data/raw
+          test "$(find data/raw -name inside.tcpdump.gz -type f | wc -l)" -eq 5
+          du -sh data/raw
+
+      - name: Check each gzip archive integrity and record SHA256
+        shell: bash
+        run: |
+          mkdir -p results
+          find data/raw -name inside.tcpdump.gz -type f -print0 |
+            sort -z | xargs -0 sha256sum > results/sha256sums.txt
+          while IFS= read -r -d '' file; do
+            echo "[gzip] checking $file"
+            gzip -t "$file"
+          done < <(find data/raw -name inside.tcpdump.gz -type f -print0 | sort -z)
+
+      - name: Extract 60-second series using streaming TShark
+        run: |
+          darpa-anomaly preprocess --data-dir data/raw \
+            --series data/processed/traffic_60s.csv --max-gap-minutes 5
+          wc -l data/processed/traffic_60s.csv
+
+      - name: Audit chronological order, source days and exact PPS
+        run: |
+          python -m anomaly_detection.validate \
+            --series data/processed/traffic_60s.csv \
+            --output results/capture_validation.json
+
+      - name: Run causal EWMA/MAD anomaly detection
+        run: |
+          darpa-anomaly detect \
+            --series data/processed/traffic_60s.csv --out-dir results \
+            --alpha 0.2 --threshold 4.5
+
+      - name: Generate graphs with packets per second on Y axis
+        run: |
+          darpa-anomaly plot \
+            --detections results/detections.csv --out-dir results/figures
+
+      - name: Write job summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              out.write("# DARPA 1999 Week 2 — offline analysis\n\n")
+              path = Path("results/capture_validation.json")
+              if path.exists():
+                  data = json.loads(path.read_text())
+                  out.write(f"**60-second windows:** {data['total_windows']:,}\n\n")
+                  out.write(f"**Captured packets:** {data['total_packets']:,}\n\n")
+                  out.write("| Input | Windows | Packets | First UTC | Last UTC |\n")
+                  out.write("|---|---:|---:|---|---|\n")
+                  for day, stats in data["per_capture"].items():
+                      out.write(
+                          f"| {day} | {stats['windows']:,} | {stats['packets']:,} | "
+                          f"{stats['first_utc']} | {stats['last_utc']} |\n"
+                      )
+                  out.write("\n")
+              else:
+                  out.write("**Capture validation not completed** — see failed step.\n\n")
+              path = Path("results/metrics.json")
+              if path.exists():
+                  metric = json.loads(path.read_text())
+                  out.write(f"**EWMA/MAD alerts:** {metric['anomaly_windows']:,}\n\n")
+                  out.write(f"**One-step MAE (PPS):** {metric['mae_pps']}\n\n")
+                  out.write("Attack labels have not yet been aligned to alerts.\n")
+          PY
+
+      - name: Upload compact analysis artifacts (no raw PCAP)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darpa-week2-60s-${{ github.run_id }}
+          path: |
+            data/processed/traffic_60s.csv
+            results/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
