@@ -1,0 +1,116 @@
+name: DARPA 1999 - PCAP protocol and destination evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/pcap-packet-evidence-stage5
+    paths:
+      - .github/workflows/packet-evidence.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Audit all 115 alerts against original INSIDE packet metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Checkout project and versioned Stage 2-4 results
+        uses: actions/checkout@v4
+
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install TShark gzip and project
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark gzip
+          python -m pip install -e .
+
+      - name: Test evidence extractor
+        run: python -m unittest discover -s tests -v
+
+      - name: Download original five PCAP files
+        run: darpa-anomaly download --data-dir data/raw
+
+      - name: Confirm integrity and archived SHA256
+        shell: bash
+        run: |
+          for day in monday tuesday wednesday thursday friday; do
+            gzip -t "data/raw/$day/inside.tcpdump.gz"
+          done
+          sha256sum -c reports/week2-1999/results/source_archive_sha256sums.txt
+
+      - name: Read original packet headers and aggregate targeted evidence
+        run: python -m anomaly_detection.packet_evidence --pcaps data/raw
+
+      - name: Validate evidence and produce summary
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          base = Path("reports/week2-1999/stage5-packet-evidence")
+          summary = json.loads((base / "summary.json").read_text())
+          assert summary["total_frames_validated"] == 7275137
+          assert summary["original_ewma_alerts_investigated"] == 115
+          assert summary["official_event_ids"] == [17,24,26,36]
+          with (base / "all_115_alert_packet_audit.csv").open(newline="") as f:
+              alerts = list(csv.DictReader(f))
+          with (base / "four_attack_event_evidence.csv").open(newline="") as f:
+              events = list(csv.DictReader(f))
+          with (base / "packet_window_features.csv").open(newline="") as f:
+              windows = list(csv.DictReader(f))
+          assert len(alerts) == 115
+          assert len(events) == 4
+          assert len(windows) == summary["selected_windows"]
+          assert sum(summary["alert_traffic_phenotypes"].values()) == 115
+          assert summary["confirmed_true_positives"] is None
+          assert summary["confirmed_false_positives"] is None
+          pigeon = next(x for x in events if x["attack_id"] == "26")
+          assert pigeon["target_ipv4_official"] == "172.16.114.207"
+          for x in events:
+              if x["attack_id"] != "26":
+                  assert x["target_ipv4_official"] == ""
+          for fname in ("four_event_syn_pps.png", "alert_protocol_phenotypes.png"):
+              assert (base / "figures" / fname).stat().st_size > 1000
+          print("Validated evidence:", summary)
+          PY
+
+      - name: Commit small derived reports and figures (not PCAPs)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f reports/week2-1999/stage5-packet-evidence
+          if git diff --cached --quiet; then
+            echo 'Identical results already tracked'
+          else
+            git commit -m 'results: audit four attack candidates and 115 anomalies using original PCAP metadata'
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Publish summary
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, os
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("# PCAP evidence audit (Stages 3-5)\n\n")
+              p = Path("reports/week2-1999/stage5-packet-evidence/summary.json")
+              if p.exists():
+                  s = json.loads(p.read_text())
+                  f.write(f"- Raw packets checked: {s['total_frames_validated']:,}\n")
+                  f.write(f"- PPS alert windows analyzed: {s['original_ewma_alerts_investigated']}\n")
+                  f.write(f"- Event candidates: {s['official_event_ids']}\n")
+                  f.write(f"- Confidence boundary: {s['reason_no_tp_fp']}\n\n")
+              else:
+                  f.write("Investigation incomplete; see failed step logs.\n")
+          PY
