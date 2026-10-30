@@ -12,7 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from .ground_truth_week2 import (
-    build_labels, events_from_csv, intervals_from_csv, write_csv, sha256,
+    build_labels, events_from_csv, intervals_from_csv, write_csv, sha256, EST,
 )
 from .part_b import (
     confusion_matrix, prediction_metrics, read_series, sma_mad, utc_instant,
@@ -136,7 +136,7 @@ def check_onset_proximity(predictions: list[dict], events: list[dict]) -> tuple[
         by_day.setdefault(key[0], []).append((minute, row))
     event_audit = []
     for event in events:
-        day = event["onset"].strftime("%A").lower()
+        day = event["onset"].astimezone(EST).strftime("%A").lower()
         minute = event["minute"]
         at_onset = mapped.get((day, minute))
         scorable = at_onset is not None and at_onset["is_warmup"] == 0
