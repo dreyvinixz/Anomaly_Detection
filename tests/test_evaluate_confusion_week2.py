@@ -47,7 +47,7 @@ class ConfusionStage3Tests(unittest.TestCase):
         self.assertIsNone(metrics["verified_subset_counts"])
         self.assertEqual(metrics["coverage"]["scored_windows"], 5)
         self.assertEqual(metrics["coverage"]["unknown_scored_windows"], 5)
-        self.assertEqual(metrics["coverage"]["unknown_alarm_windows"], 1)
+        self.assertEqual(metrics["coverage"]["unknown_alarm_windows"], 5)  # SMA spike persists as trailing errors
 
     def test_complete_labels_unlock_correct_2_by_2(self):
         raw = samples(spike=24)
