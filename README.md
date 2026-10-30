@@ -156,3 +156,12 @@ Os fenótipos são categorias de triagem, não ground truth. Mesmo que um
 alerta coincida com um pico de SYN para o destino de um ataque, isto
 não comprova por si só que a sessão era maliciosa ou que o modelo a
 identificou corretamente.
+
+
+## Ground truth auditavel da Semana 2
+
+O comando darpa-anomaly ground-truth-week2 gera fila de 43 eventos e rotulos
+por minuto com tres estados: 1 ataque validado, 0 benigno validado, ou
+indeterminado. Sem duracoes oficiais, nao inventa matriz de confusao.
+
+[Metodologia e fontes](docs/GROUND_TRUTH_WEEK2.md).

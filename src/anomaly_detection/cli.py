@@ -38,6 +38,13 @@ def main() -> None:
     cmd.add_argument("--threshold", type=float, default=4.5)
     cmd.add_argument("--residual-warmup", type=int, default=10)
 
+    cmd = sub.add_parser("ground-truth-week2", help="Auditar rotulos DARPA Week 2")
+    cmd.add_argument("--series", type=Path, default=Path("reports/week2-1999/data/traffic_60s.csv"))
+    cmd.add_argument("--official", type=Path, default=Path("data/ground_truth/darpa1999_week2_official_attack_starts.csv"))
+    cmd.add_argument("--intervals", type=Path, default=Path("data/ground_truth/week2_intervals_review.csv"))
+    cmd.add_argument("--packet-evidence", type=Path, default=Path("reports/week2-1999/stage5-packet-evidence/four_attack_event_evidence.csv"))
+    cmd.add_argument("--out-dir", type=Path, default=Path("results/ground-truth-week2"))
+
     cmd = sub.add_parser("plot", help="Generate PPS charts")
     cmd.add_argument("--detections", type=Path, default=Path("results/detections.csv"))
     cmd.add_argument("--out-dir", type=Path, default=Path("results/figures"))
@@ -47,6 +54,12 @@ def main() -> None:
         download(args.data_dir)
     elif args.command == "preprocess":
         preprocess(args.data_dir, args.series, args.max_gap_minutes)
+    elif args.command == "ground-truth-week2":
+        from .ground_truth_week2 import audit
+        import json
+        print(json.dumps(audit(args.series, args.official, args.intervals,
+                               args.out_dir, args.packet_evidence),
+                         indent=2, ensure_ascii=False))
     elif args.command == "part-b":
         from .part_b import run_part_b
         import json

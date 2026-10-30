@@ -1,0 +1,26 @@
+name: DARPA Week 2 - Ground truth provenance audit
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/anomaly_detection/ground_truth_week2.py'
+      - 'tests/test_ground_truth_week2.py'
+      - 'data/ground_truth/week2_intervals_review.csv'
+      - '.github/workflows/ground-truth-week2.yml'
+      - 'src/anomaly_detection/cli.py'
+jobs:
+  ground-truth-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: python -m unittest discover -s tests -v
+      - run: darpa-anomaly ground-truth-week2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: darpa-week2-ground-truth-audit
+          path: results/ground-truth-week2/
+          if-no-files-found: error
