@@ -31,6 +31,13 @@ def main() -> None:
         if name == "run":
             cmd.add_argument("--data-dir", type=Path, default=Path("data/raw"))
 
+    cmd = sub.add_parser("part-b", help="Entrega B: SMA(10), NMSE, MAPE, alarmes")
+    cmd.add_argument("--series", type=Path, default=Path("reports/week2-1999/data/traffic_60s.csv"))
+    cmd.add_argument("--out-dir", type=Path, default=Path("results/part-b"))
+    cmd.add_argument("--labels", type=Path)
+    cmd.add_argument("--threshold", type=float, default=4.5)
+    cmd.add_argument("--residual-warmup", type=int, default=10)
+
     cmd = sub.add_parser("plot", help="Generate PPS charts")
     cmd.add_argument("--detections", type=Path, default=Path("results/detections.csv"))
     cmd.add_argument("--out-dir", type=Path, default=Path("results/figures"))
@@ -40,6 +47,11 @@ def main() -> None:
         download(args.data_dir)
     elif args.command == "preprocess":
         preprocess(args.data_dir, args.series, args.max_gap_minutes)
+    elif args.command == "part-b":
+        from .part_b import run_part_b
+        import json
+        print(json.dumps(run_part_b(args.series, args.out_dir, args.labels,
+                                    args.threshold, args.residual_warmup), indent=2))
     elif args.command == "plot":
         print(plot(args.detections, args.out_dir))
     else:

@@ -1,0 +1,29 @@
+name: Parte B - SMA10 prediction and alarms
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/anomaly_detection/part_b.py'
+      - 'src/anomaly_detection/cli.py'
+      - 'tests/test_part_b.py'
+      - '.github/workflows/part-b.yml'
+jobs:
+  parte-b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: python -m unittest discover -s tests -v
+      - name: Execute SMA10 on real processed Week 2 CSV
+        run: |
+          darpa-anomaly part-b \
+            --series reports/week2-1999/data/traffic_60s.csv \
+            --out-dir results/part-b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: darpa-week2-part-b-sma10
+          path: results/part-b/
+          if-no-files-found: error
