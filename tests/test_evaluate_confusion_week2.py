@@ -12,11 +12,11 @@ from anomaly_detection.evaluate_confusion_week2 import (
 BASE = datetime(1999, 3, 8, 13, tzinfo=timezone.utc)
 
 
-def samples(n=25):
+def samples(n=25, spike=20):
     return [{
         "source_day": "monday",
         "window_start_utc": (BASE + timedelta(minutes=i)).isoformat(),
-        "pps": "100" if i == 20 else "10",
+        "pps": "100" if i == spike else "10",
     } for i in range(n)]
 
 
@@ -50,9 +50,9 @@ class ConfusionStage3Tests(unittest.TestCase):
         self.assertEqual(metrics["coverage"]["unknown_alarm_windows"], 1)
 
     def test_complete_labels_unlock_correct_2_by_2(self):
-        raw = samples()
+        raw = samples(spike=24)
         p = sma_mad(raw, window=10)
-        labels = labeled_for(raw, {20: "1", 21: "0", 22: "0", 23: "0", 24: "0"})
+        labels = labeled_for(raw, {20: "0", 21: "0", 22: "0", 23: "0", 24: "1"})
         metrics = assess_scored_windows(p, labels)
         matrix = metrics["confusion_matrix"]
         self.assertEqual([matrix[k] for k in ("tp", "fp", "fn", "tn")], [1, 0, 0, 4])
@@ -60,9 +60,9 @@ class ConfusionStage3Tests(unittest.TestCase):
         self.assertEqual(metrics["classification_metrics"]["recall"], 1.0)
 
     def test_partial_truth_has_descriptive_subset_only(self):
-        raw = samples()
+        raw = samples(spike=24)
         p = sma_mad(raw, window=10)
-        labels = labeled_for(raw, {20: "1", 21: "0"})
+        labels = labeled_for(raw, {23: "0", 24: "1"})
         result = assess_scored_windows(p, labels)
         self.assertIsNone(result["confusion_matrix"])
         self.assertIsNone(result["classification_metrics"])
