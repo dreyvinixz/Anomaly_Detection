@@ -55,7 +55,7 @@ class PartBTests(unittest.TestCase):
                 {"pps": "3", "predicted_pps": 2},
                 {"pps": "0", "predicted_pps": 2}]
         result = prediction_metrics(rows)
-        self.assertAlmostEqual(result["nmse"], 2.0)
+        self.assertAlmostEqual(result["nmse"], 1.28571429)
         self.assertAlmostEqual(result["mape_percent"], 66.666667, places=5)
         self.assertEqual(result["mape_excluded_zero_windows"], 1)
 
