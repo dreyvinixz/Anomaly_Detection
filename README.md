@@ -165,3 +165,13 @@ por minuto com tres estados: 1 ataque validado, 0 benigno validado, ou
 indeterminado. Sem duracoes oficiais, nao inventa matriz de confusao.
 
 [Metodologia e fontes](docs/GROUND_TRUTH_WEEK2.md).
+
+
+## Etapa 3 — Matriz de confusao e cobertura de rotulos
+
+Use `darpa-anomaly evaluate-confusion-week2` para analisar os 149 alarmes
+SMA(10) por minuto, alinhar com rótulos verificados e auditar a proximidade
+aos inicios oficiais. A matriz de confusao completa so e exportada com
+cobertura de 100% das janelas elegiveis; desconhecidos nao sao negativos.
+
+[Metodologia e saidas](docs/ETAPA_3_CONFUSION.md).
