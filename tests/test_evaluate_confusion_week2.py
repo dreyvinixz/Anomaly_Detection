@@ -116,6 +116,24 @@ class ConfusionStage3Tests(unittest.TestCase):
         self.assertEqual(summary[2]["onsets_scorable"], 0)
         self.assertEqual(summary[2]["scorable_onset_proximity_rate"], "")
 
+    def test_utc_next_day_still_matches_original_est_capture(self):
+        next_utc_day = datetime(1999, 3, 9, 1, tzinfo=timezone.utc)
+        observed = [{
+            "source_day": "monday",
+            "window_start_utc": next_utc_day.isoformat(),
+            "is_warmup": 0,
+            "is_anomaly": 1,
+        }]
+        official = [{
+            "id": 7, "attack": "ps attack", "destination": "host",
+            "onset": next_utc_day + timedelta(seconds=15),
+            "minute": next_utc_day,
+        }]
+        summary, rows = check_onset_proximity(observed, official)
+        self.assertEqual(rows[0]["onset_captured"], 1)
+        self.assertEqual(rows[0]["alert_within_0min"], 1)
+        self.assertEqual(summary[0]["onsets_scorable"], 1)
+
     def test_real_data_artifacts_and_no_fabricated_confusion(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmp:
