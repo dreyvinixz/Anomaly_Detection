@@ -1,0 +1,30 @@
+{
+  "source_run": "https://github.com/dreyvinixz/Anomaly_Detection/actions/runs/41147956979",
+  "artifact_url": "https://github.com/dreyvinixz/Anomaly_Detection/actions/runs/41147956979/artifacts/13021653283",
+  "candidate_attack_ids": [
+    17,
+    26,
+    36
+  ],
+  "source_archives": [
+    {
+      "day": "wednesday",
+      "packets": 1011149,
+      "sha256": "1f4d258b673b670b951e53fceb8512df08d49af28abfe50fd1dc9d5b3dbc0b31"
+    },
+    {
+      "day": "thursday",
+      "packets": 1563069,
+      "sha256": "76a31426f13d38a2e39fa09d8715b9ca474ac30f4db4aa8bb5130e9b31803bff"
+    },
+    {
+      "day": "friday",
+      "packets": 1362422,
+      "sha256": "84f672577e52dafea17d1a7380dffcbff839bd234233d1fadc894c9b67129cdc"
+    }
+  ],
+  "observed_matching_syn_events": 3,
+  "verified_attack_intervals": 0,
+  "verified_benign_intervals": 0,
+  "reason": "source/target SYN corroboration does not uniquely establish entire malicious session, benign coverage, or full attack boundaries"
+}
