@@ -1,0 +1,56 @@
+name: DARPA Week2 - PCAP corroboration of candidate attack intervals
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/anomaly_detection/verify_week2_pcap.py'
+      - 'tests/test_week2_literature_intervals.py'
+      - 'data/ground_truth/week2_intervals_review.csv'
+      - '.github/workflows/verify-week2-literature-pcap.yml'
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 160
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Setup TShark and tests
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark gzip
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+      - name: Download Wed/Thu/Fri INSIDE captures only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from shutil import copyfileobj
+          from anomaly_detection.download import BASE
+          for day in ("wednesday", "thursday", "friday"):
+              path = Path("data/raw") / day / "inside.tcpdump.gz"
+              path.parent.mkdir(parents=True, exist_ok=True)
+              request = Request(f"{BASE}/{day}/inside.tcpdump.gz",
+                                headers={"User-Agent": "DARPA-Research/0.1"})
+              with urlopen(request, timeout=180) as reader, path.open("wb") as writer:
+                  copyfileobj(reader, writer, length=1024*1024)
+              print(day, path.stat().st_size, flush=True)
+          PY
+      - name: Verify original gzip SHA-256
+        run: |
+          set -euo pipefail
+          for day in wednesday thursday friday; do gzip -t "data/raw/$day/inside.tcpdump.gz"; done
+          grep -E 'data/raw/(wednesday|thursday|friday)/inside.tcpdump.gz$' reports/week2-1999/results/source_archive_sha256sums.txt | sha256sum -c -
+      - name: Audit candidate packet pairs and timestamps
+        run: python -m anomaly_detection.verify_week2_pcap --pcaps data/raw --out results/week2-pcap-validation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: darpa-week2-candidate-pcap-audit
+          path: results/week2-pcap-validation/
+          if-no-files-found: warn
